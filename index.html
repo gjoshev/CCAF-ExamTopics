@@ -77,6 +77,27 @@ body.hit .verdict{color:var(--right)} body.miss .verdict{color:var(--wrong)}
 .why{border:1px solid var(--line);border-left:4px solid var(--muted);background:var(--surface);border-radius:6px;padding:14px 16px}
 .why .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
 
+/* ---------- filtered list view ---------- */
+#listview{display:none;padding:28px 0 60px}
+body.listing #listview{display:block}
+body.listing main,body.listing .nav,body.listing .hint{display:none}
+.lvhead{display:flex;gap:16px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.lvhead h2{margin:0;font:700 19px/1.2 var(--cond);letter-spacing:-.01em}
+.lvhead h2 em{font-style:normal;color:var(--muted);font-weight:600}
+.lvhead .ghost{margin-left:auto}
+.lvrows{display:flex;flex-direction:column;gap:8px}
+.lvrow{display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 15px;font:400 15px/1.5 var(--sans);color:var(--ink);transition:border-color .12s,background .12s}
+.lvrow:hover{border-color:var(--accent);background:#fafcfb}
+.lvrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lvrow .n{flex:0 0 46px;font:700 12px/1.5 var(--cond);letter-spacing:.08em;color:var(--accent)}
+.lvrow.miss .n{color:var(--wrong)}
+.lvrow .body{flex:1;min-width:0}
+.lvrow .snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lvrow .meta{margin-top:5px;font:500 12px/1.4 var(--mono);color:var(--muted)}
+.lvrow .meta b{color:var(--wrong);font-weight:500} .lvrow .meta i{color:var(--right);font-style:normal}
+.lvempty{display:none;padding:30px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
+body.lv-empty .lvempty{display:block}
+
 /* ---------- paging ---------- */
 .nav{position:sticky;bottom:0;background:rgba(241,244,243,.95);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
 .navin{display:flex;gap:10px;align-items:center;padding:14px 0}
@@ -112,7 +133,8 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
       </div>
     </div>
     <div class="utils">
-      <button class="ghost" id="firstOpen">Go to first unanswered</button>
+      <button class="ghost" id="listOpen">Unanswered</button>
+      <button class="ghost" id="listMissed">Missed</button>
       <button class="ghost" id="reset">Clear all answers</button>
     </div>
   </div>
@@ -121,6 +143,17 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 <div class="mapwrap">
   <div class="shell"><div class="map" id="map" role="group" aria-label="Jump to a question"></div></div>
 </div>
+
+<section id="listview" aria-live="polite">
+  <div class="shell">
+    <div class="lvhead">
+      <h2 id="lvtitle">Unanswered</h2>
+      <button class="ghost" id="lvclose">Back to the question</button>
+    </div>
+    <div class="lvrows" id="lvrows"></div>
+    <p class="lvempty" id="lvempty"></p>
+  </div>
+</section>
 
 <main>
   <div class="shell">
@@ -152,7 +185,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 </div>
 
 <div class="shell hint">
-  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move between questions
+  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move between questions · <kbd>M</kbd> missed list · <kbd>U</kbd> unanswered list · <kbd>Esc</kbd> to close
 </div>
 
 <script>
@@ -913,7 +946,11 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     verdict:document.getElementById('verdict'), alabel:document.getElementById('alabel'),
     atext:document.getElementById('atext'), wtext:document.getElementById('wtext'),
     prev: document.getElementById('prev'), next:document.getElementById('next'),
-    clearOne: document.getElementById('clearOne')
+    clearOne: document.getElementById('clearOne'),
+    listOpen: document.getElementById('listOpen'),
+    listMissed: document.getElementById('listMissed'),
+    lvtitle: document.getElementById('lvtitle'), lvrows: document.getElementById('lvrows'),
+    lvempty: document.getElementById('lvempty'), lvclose: document.getElementById('lvclose')
   };
 
   /* --- jump map --- */
@@ -977,6 +1014,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
 
   function go(i){
     if (i < 0 || i >= Q.length) return;
+    closeList();
     cur = i; put(POS, cur); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1000,16 +1038,55 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     document.getElementById('sOk').textContent = ok;
     document.getElementById('sNo').textContent = ans - ok;
     document.getElementById('sAcc').textContent = ans ? Math.round(ok / ans * 100) + '%' : '—';
+
+    var missed = ans - ok, open_ = Q.length - ans;
+    el.listMissed.textContent = 'Missed (' + missed + ')';
+    el.listOpen.textContent = 'Unanswered (' + open_ + ')';
   }
 
   el.prev.addEventListener('click', function(){ go(cur - 1); });
   el.next.addEventListener('click', function(){ go(cur + 1); });
   el.clearOne.addEventListener('click', clearOne);
 
-  document.getElementById('firstOpen').addEventListener('click', function(){
-    for (var i = 0; i < Q.length; i++) if (state[Q[i].n] === undefined) return go(i);
-    go(Q.length - 1);
-  });
+  function isMissed(i){ var p = state[Q[i].n]; return p !== undefined && p !== Q[i].a; }
+  function isOpen(i){ return state[Q[i].n] === undefined; }
+
+  function openList(kind){
+    var test = kind === 'missed' ? isMissed : isOpen;
+    var hits = [];
+    for (var i = 0; i < Q.length; i++) if (test(i)) hits.push(i);
+
+    el.lvtitle.innerHTML = (kind === 'missed' ? 'Missed questions' : 'Unanswered questions') +
+      ' <em>' + hits.length + ' of ' + Q.length + '</em>';
+    el.lvempty.textContent = kind === 'missed'
+      ? 'Nothing missed so far. Answer some questions and anything you get wrong will collect here.'
+      : 'Every question has been answered. Use Clear all answers to run the bank again.';
+
+    el.lvrows.innerHTML = '';
+    hits.forEach(function(i){
+      var q = Q[i], b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lvrow' + (kind === 'missed' ? ' miss' : '');
+      var meta = kind === 'missed'
+        ? '<div class="meta">You chose <b>' + LTR[state[q.n]] + '</b> · correct is <i>' + LTR[q.a] + '</i></div>'
+        : '';
+      b.innerHTML = '<span class="n">Q' + q.n + '</span><span class="body"><span class="snip">' +
+                    tech(q.q) + '</span>' + meta + '</span>';
+      b.addEventListener('click', function(){ go(i); });
+      el.lvrows.appendChild(b);
+    });
+
+    el.lvclose.textContent = 'Back to Q' + Q[cur].n;
+    document.body.classList.add('listing');
+    document.body.classList.toggle('lv-empty', hits.length === 0);
+    window.scrollTo({ top: 0 });
+  }
+
+  function closeList(){ document.body.classList.remove('listing', 'lv-empty'); }
+
+  el.listOpen.addEventListener('click', function(){ openList('open'); });
+  el.listMissed.addEventListener('click', function(){ openList('missed'); });
+  el.lvclose.addEventListener('click', closeList);
 
   /* Clear all: two-step, because confirm() is blocked in sandboxed frames */
   var rb = document.getElementById('reset'), armed = false, timer;
@@ -1024,7 +1101,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     clearTimeout(timer); disarm();
     state = {};
     try{ localStorage.removeItem(KEY); }catch(e){}
-    save(); go(0); tally();
+    save(); closeList(); go(0); tally();
   });
 
   document.addEventListener('keydown', function(ev){
@@ -1033,6 +1110,10 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     if (t === 'input' || t === 'textarea') return;
     if (ev.key === 'ArrowRight'){ ev.preventDefault(); go(cur + 1); return; }
     if (ev.key === 'ArrowLeft'){ ev.preventDefault(); go(cur - 1); return; }
+    if (ev.key === 'Escape'){ closeList(); return; }
+    if (document.body.classList.contains('listing')) return;
+    if ((ev.key || '').toLowerCase() === 'm'){ ev.preventDefault(); openList('missed'); return; }
+    if ((ev.key || '').toLowerCase() === 'u'){ ev.preventDefault(); openList('open'); return; }
     var i = ['a','b','c','d'].indexOf((ev.key || '').toLowerCase());
     if (i === -1) i = ['1','2','3','4'].indexOf(ev.key);
     if (i > -1){ ev.preventDefault(); answer(i); }
