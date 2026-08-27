@@ -49,6 +49,16 @@ h1 span{display:block;font:400 12px/1.4 var(--sans);letter-spacing:.06em;text-tr
 .map button.now{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .map button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+/* ---------- review mode ---------- */
+.reviewbar{display:none;align-items:center;gap:14px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid #a9cfc9;border-radius:8px;padding:11px 14px;margin-bottom:20px}
+body.review .reviewbar{display:flex}
+.reviewbar span{font:600 13px/1.3 var(--sans);color:#0b4a45}
+.reviewbar span em{font-style:normal;font-weight:400;color:#3d6b66}
+.reviewbar .ghost{margin-left:auto;padding:6px 10px;font-size:12px}
+.lvhead #lvstart{margin-left:auto}
+.lvhead #lvclose{margin-left:0}
+body.lv-empty #lvstart{display:none}
+
 /* ---------- question ---------- */
 main{padding:28px 0 40px}
 .qhead{display:flex;gap:12px;align-items:baseline;margin-bottom:14px}
@@ -105,6 +115,8 @@ body.lv-empty .lvempty{display:block}
 .next:hover{background:#0c4a45}
 .next:disabled{opacity:.4;cursor:default}
 .done-msg{padding:26px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px;margin-top:20px;display:none}
+.done-msg p{margin:0 0 14px}
+.done-msg b{color:var(--ink)}
 body.finished .done-msg{display:block}
 .hint{color:var(--muted);font-size:12px;padding:0 0 26px}
 kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width:2px;background:var(--surface);border-radius:3px;padding:3px 5px}
@@ -135,7 +147,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
     <div class="utils">
       <button class="ghost" id="listOpen">Unanswered</button>
       <button class="ghost" id="listMissed">Missed</button>
-      <button class="ghost" id="reset">Clear all answers</button>
+      <button class="ghost" id="reset">New session</button>
     </div>
   </div>
 </header>
@@ -148,6 +160,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
   <div class="shell">
     <div class="lvhead">
       <h2 id="lvtitle">Unanswered</h2>
+      <button class="ghost" id="lvstart">Review these in order →</button>
       <button class="ghost" id="lvclose">Back to the question</button>
     </div>
     <div class="lvrows" id="lvrows"></div>
@@ -157,6 +170,11 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 
 <main>
   <div class="shell">
+    <div class="reviewbar" id="reviewbar">
+      <span id="rbtext"></span>
+      <button class="ghost" id="rbexit">Exit review</button>
+    </div>
+
     <div class="qhead">
       <span class="qnum" id="qnum">Q1</span>
       <span class="qof" id="qof">Question 1 of 134</span>
@@ -170,7 +188,10 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
       <div class="why"><span class="lbl">Why</span><span id="wtext"></span></div>
     </div>
 
-    <div class="done-msg" id="doneMsg">That's all 134. Use <b>Clear all answers</b> to run the bank again, or jump back to anything above.</div>
+    <div class="done-msg" id="doneMsg">
+      <p id="doneLine">That's all 134.</p>
+      <button class="ghost" id="resetEnd">Start a new session</button>
+    </div>
   </div>
 </main>
 
@@ -185,7 +206,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 </div>
 
 <div class="shell hint">
-  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move between questions · <kbd>M</kbd> missed list · <kbd>U</kbd> unanswered list · <kbd>Esc</kbd> to close
+  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move between questions · <kbd>M</kbd> missed list · <kbd>U</kbd> unanswered list · <kbd>Esc</kbd> to close or leave review
 </div>
 
 <script>
@@ -925,7 +946,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
 (function(){
   var Q = window.QUESTIONS || [], LTR = ['A','B','C','D'];
   var KEY = 'ccaf-progress-v1', POS = 'ccaf-pos-v1';
-  var state = load(KEY, {}), cur = 0;
+  var state = load(KEY, {}), cur = 0, mode = 'all', listKind = 'open';
   var saved = load(POS, null);
   if (typeof saved === 'number' && saved >= 0 && saved < Q.length) cur = saved;
 
@@ -950,7 +971,11 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     listOpen: document.getElementById('listOpen'),
     listMissed: document.getElementById('listMissed'),
     lvtitle: document.getElementById('lvtitle'), lvrows: document.getElementById('lvrows'),
-    lvempty: document.getElementById('lvempty'), lvclose: document.getElementById('lvclose')
+    lvempty: document.getElementById('lvempty'), lvclose: document.getElementById('lvclose'),
+    lvstart: document.getElementById('lvstart'),
+    reviewbar: document.getElementById('reviewbar'), rbtext: document.getElementById('rbtext'),
+    rbexit: document.getElementById('rbexit'),
+    doneLine: document.getElementById('doneLine')
   };
 
   /* --- jump map --- */
@@ -958,7 +983,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     var b = document.createElement('button');
     b.type = 'button'; b.title = 'Question ' + q.n;
     b.setAttribute('aria-label', 'Go to question ' + q.n);
-    b.addEventListener('click', function(){ go(i); });
+    b.addEventListener('click', function(){ go(i, 'all'); });
     el.map.appendChild(b);
   });
   var cells = el.map.children;
@@ -1005,19 +1030,69 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       el.wtext.innerHTML = tech(q.e);
     }
 
-    el.prev.disabled = cur === 0;
-    el.next.disabled = cur === Q.length - 1;
+    var reviewing = mode !== 'all';
+    document.body.classList.toggle('review', reviewing);
+
+    if (reviewing){
+      var noun = mode === 'missed' ? 'missed' : 'unanswered';
+      el.prev.textContent = '← Previous ' + noun;
+      el.next.textContent = 'Next ' + noun + ' →';
+      el.prev.disabled = step(-1) === -1;
+      el.next.disabled = step(1) === -1;
+
+      var m = members(), at = m.indexOf(cur);
+      if (m.length === 0){
+        el.rbtext.innerHTML = 'Reviewing ' + noun + ' <em>— none left</em>';
+      } else if (at > -1){
+        el.rbtext.innerHTML = 'Reviewing ' + noun + ' <em>' + (at + 1) + ' of ' + m.length + '</em>';
+      } else {
+        el.rbtext.innerHTML = 'Reviewing ' + noun +
+          ' <em>this one is no longer ' + noun + ' · ' + m.length + ' left</em>';
+      }
+    } else {
+      el.prev.textContent = '← Previous';
+      el.next.textContent = 'Next question →';
+      el.prev.disabled = cur === 0;
+      el.next.disabled = cur === Q.length - 1;
+    }
+
     el.clearOne.disabled = !done;
-    document.body.classList.toggle('finished', cur === Q.length - 1 && done);
+    var fin = !reviewing && cur === Q.length - 1 && done;
+    document.body.classList.toggle('finished', fin);
+    if (fin){
+      var ans = 0, ok = 0;
+      Q.forEach(function(x){ if (state[x.n] !== undefined){ ans++; if (state[x.n] === x.a) ok++; } });
+      el.doneLine.innerHTML = ans === Q.length
+        ? 'All ' + Q.length + ' answered — <b>' + ok + ' correct</b>, ' + (ans - ok) + ' missed.'
+        : 'End of the bank. <b>' + ans + ' of ' + Q.length + '</b> answered so far.';
+    }
     paintMap();
   }
 
-  function go(i){
+  function inSet(i){
+    if (mode === 'missed') return isMissed(i);
+    if (mode === 'open') return isOpen(i);
+    return true;
+  }
+  function members(){
+    var m = [];
+    for (var i = 0; i < Q.length; i++) if (inSet(i)) m.push(i);
+    return m;
+  }
+  function step(dir){
+    for (var i = cur + dir; i >= 0 && i < Q.length; i += dir) if (inSet(i)) return i;
+    return -1;
+  }
+
+  function go(i, newMode){
     if (i < 0 || i >= Q.length) return;
+    if (newMode) mode = newMode;
     closeList();
     cur = i; put(POS, cur); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function exitReview(){ mode = 'all'; render(); }
 
   function answer(i){
     var q = Q[cur];
@@ -1044,14 +1119,16 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     el.listOpen.textContent = 'Unanswered (' + open_ + ')';
   }
 
-  el.prev.addEventListener('click', function(){ go(cur - 1); });
-  el.next.addEventListener('click', function(){ go(cur + 1); });
+  el.prev.addEventListener('click', function(){ go(mode === 'all' ? cur - 1 : step(-1)); });
+  el.next.addEventListener('click', function(){ go(mode === 'all' ? cur + 1 : step(1)); });
+  el.rbexit.addEventListener('click', exitReview);
   el.clearOne.addEventListener('click', clearOne);
 
   function isMissed(i){ var p = state[Q[i].n]; return p !== undefined && p !== Q[i].a; }
   function isOpen(i){ return state[Q[i].n] === undefined; }
 
   function openList(kind){
+    listKind = kind;
     var test = kind === 'missed' ? isMissed : isOpen;
     var hits = [];
     for (var i = 0; i < Q.length; i++) if (test(i)) hits.push(i);
@@ -1060,7 +1137,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       ' <em>' + hits.length + ' of ' + Q.length + '</em>';
     el.lvempty.textContent = kind === 'missed'
       ? 'Nothing missed so far. Answer some questions and anything you get wrong will collect here.'
-      : 'Every question has been answered. Use Clear all answers to run the bank again.';
+      : 'Every question has been answered. Use New session to run the bank again.';
 
     el.lvrows.innerHTML = '';
     hits.forEach(function(i){
@@ -1072,9 +1149,11 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
         : '';
       b.innerHTML = '<span class="n">Q' + q.n + '</span><span class="body"><span class="snip">' +
                     tech(q.q) + '</span>' + meta + '</span>';
-      b.addEventListener('click', function(){ go(i); });
+      b.addEventListener('click', function(){ go(i, kind); });
       el.lvrows.appendChild(b);
     });
+
+    el.lvstart.textContent = (kind === 'missed' ? 'Review these in order' : 'Work through these in order') + ' →';
 
     el.lvclose.textContent = 'Back to Q' + Q[cur].n;
     document.body.classList.add('listing');
@@ -1087,22 +1166,35 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
   el.listOpen.addEventListener('click', function(){ openList('open'); });
   el.listMissed.addEventListener('click', function(){ openList('missed'); });
   el.lvclose.addEventListener('click', closeList);
+  el.lvstart.addEventListener('click', function(){
+    var m = [], test = listKind === 'missed' ? isMissed : isOpen;
+    for (var i = 0; i < Q.length; i++) if (test(i)) { m.push(i); break; }
+    if (m.length) go(m[0], listKind);
+  });
 
-  /* Clear all: two-step, because confirm() is blocked in sandboxed frames */
-  var rb = document.getElementById('reset'), armed = false, timer;
-  function disarm(){ armed = false; rb.textContent = 'Clear all answers'; rb.classList.remove('armed'); }
-  rb.addEventListener('click', function(){
-    if (!armed){
-      armed = true; rb.textContent = 'Click again to clear everything';
-      rb.classList.add('armed');
-      clearTimeout(timer); timer = setTimeout(disarm, 4000);
-      return;
-    }
-    clearTimeout(timer); disarm();
+  /* New session: wipes every answer and returns to Q1.
+     Two-step rather than confirm(), which is blocked in sandboxed frames. */
+  function newSession(){
     state = {};
     try{ localStorage.removeItem(KEY); }catch(e){}
-    save(); closeList(); go(0); tally();
-  });
+    save(); closeList(); go(0, 'all'); tally();
+  }
+
+  function armButton(btn, idle, warn, action){
+    var armed = false, timer;
+    function disarm(){ armed = false; btn.textContent = idle; btn.classList.remove('armed'); }
+    btn.addEventListener('click', function(){
+      if (!armed){
+        armed = true; btn.textContent = warn; btn.classList.add('armed');
+        clearTimeout(timer); timer = setTimeout(disarm, 4000);
+        return;
+      }
+      clearTimeout(timer); disarm(); action();
+    });
+  }
+
+  armButton(document.getElementById('reset'), 'New session', 'Click again to start over', newSession);
+  armButton(document.getElementById('resetEnd'), 'Start a new session', 'Click again to start over', newSession);
 
   document.addEventListener('keydown', function(ev){
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
@@ -1110,7 +1202,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     if (t === 'input' || t === 'textarea') return;
     if (ev.key === 'ArrowRight'){ ev.preventDefault(); go(cur + 1); return; }
     if (ev.key === 'ArrowLeft'){ ev.preventDefault(); go(cur - 1); return; }
-    if (ev.key === 'Escape'){ closeList(); return; }
+    if (ev.key === 'Escape'){ if (document.body.classList.contains('listing')) closeList(); else exitReview(); return; }
     if (document.body.classList.contains('listing')) return;
     if ((ev.key || '').toLowerCase() === 'm'){ ev.preventDefault(); openList('missed'); return; }
     if ((ev.key || '').toLowerCase() === 'u'){ ev.preventDefault(); openList('open'); return; }
