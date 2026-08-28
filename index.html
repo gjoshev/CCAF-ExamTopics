@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CCA-F Question Bank — 134 questions, untimed</title>
-<meta name="description" content="Untimed practice bank of 134 CCA-F scenario questions, one per page, with instant feedback and explanations.">
+<title>CCA-F Question Bank — 134 questions by exam topic</title>
+<meta name="description" content="Untimed practice bank of 134 CCA-F scenario questions, sorted by exam domain, with instant feedback and explanations.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,7 +22,14 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 code{font:500 .92em/1.4 var(--mono);background:var(--accent-soft);color:#0b4a45;padding:.08em .3em;border-radius:3px;word-break:break-word}
 button{font-family:inherit;cursor:pointer}
-.shell{max-width:860px;margin:0 auto;padding:0 20px}
+.shell{max-width:880px;margin:0 auto;padding:0 20px}
+
+/* per-domain identity */
+[data-dom="A"]{--dc:#0f5c56;--dbg:#e0eeeb;--dln:#a9cfc9}
+[data-dom="B"]{--dc:#5c4599;--dbg:#eae6f6;--dln:#c3b6e4}
+[data-dom="C"]{--dc:#96601a;--dbg:#f8eeda;--dln:#e4cda0}
+[data-dom="D"]{--dc:#2f5a85;--dbg:#e6eef6;--dln:#b6cbe0}
+[data-dom="E"]{--dc:#8a2f52;--dbg:#f7e6ec;--dln:#e2b3c5}
 
 /* ---------- header ---------- */
 header{background:var(--surface);border-bottom:1px solid var(--line)}
@@ -38,8 +45,10 @@ h1 span{display:block;font:400 12px/1.4 var(--sans);letter-spacing:.06em;text-tr
 .ghost:hover{border-color:var(--muted);color:var(--ink)}
 .ghost:disabled{opacity:.4;cursor:default}
 .ghost.armed{border-color:var(--wrong);color:var(--wrong);background:var(--wrong-bg)}
+.ghost.key{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ghost.key:hover{background:#d3e7e3}
 
-/* ---------- the run map: 134 cells, click to jump ---------- */
+/* ---------- run map ---------- */
 .mapwrap{background:var(--surface);border-bottom:1px solid var(--line)}
 .map{display:grid;grid-template-columns:repeat(34,1fr);gap:3px;padding:14px 0}
 .map button{aspect-ratio:1;border:1px solid var(--line);background:var(--paper);border-radius:2px;padding:0;font-size:0;transition:transform .08s}
@@ -49,21 +58,69 @@ h1 span{display:block;font:400 12px/1.4 var(--sans);letter-spacing:.06em;text-tr
 .map button.now{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .map button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* ---------- review mode ---------- */
-.reviewbar{display:none;align-items:center;gap:14px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid #a9cfc9;border-radius:8px;padding:11px 14px;margin-bottom:20px}
-body.review .reviewbar{display:flex}
-.reviewbar span{font:600 13px/1.3 var(--sans);color:#0b4a45}
-.reviewbar span em{font-style:normal;font-weight:400;color:#3d6b66}
-.reviewbar .ghost{margin-left:auto;padding:6px 10px;font-size:12px}
+/* ---------- topics ---------- */
+#topics{display:none;padding:28px 0 60px}
+body.topicsview #topics{display:block}
+body.topicsview main,body.topicsview .nav,body.topicsview .hint,body.topicsview #listview{display:none}
+.thead-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.thead-row h2{margin:0;font:700 19px/1.2 var(--cond)}
+.thead-row .ghost{margin-left:auto}
+.tintro{margin:0 0 20px;color:var(--muted);font-size:14px;max-width:62ch}
+.tlegend{margin:0 0 14px;font:400 12px/1 var(--sans);color:var(--muted)}
+.tlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+.tlegend i.c{background:var(--right)} .tlegend i.m{background:var(--wrong)} .tlegend i.u{background:var(--line-soft);border:1px solid var(--line)}
+.tgrid{display:flex;flex-direction:column;gap:12px}
+.tcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--dc);border-radius:10px;padding:16px 18px}
+.tcard h3{margin:0;font:700 16px/1.3 var(--cond);color:var(--dc)}
+.tcard .top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px}
+.tcard .weight{margin-left:auto;font:500 11px/1 var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--dc);background:var(--dbg);border:1px solid var(--dln);padding:5px 8px;border-radius:99px;white-space:nowrap}
+.tbar{display:flex;height:7px;border-radius:99px;overflow:hidden;background:var(--line-soft);margin-bottom:9px}
+.tbar i{display:block;height:100%}
+.tbar i.ok{background:var(--right)} .tbar i.no{background:var(--wrong)}
+.tstat{margin:0 0 12px;font:500 13px/1.5 var(--mono);color:var(--muted)}
+.tstat b{color:var(--ink);font-weight:500}
+.tstat i{font-style:normal;font-weight:500}
+.tstat i.c{color:var(--right)} .tstat i.m{color:var(--wrong)}
+.tacts{display:flex;gap:8px;flex-wrap:wrap}
+.tacts button{border:1px solid var(--dln);background:var(--dbg);color:var(--dc);padding:7px 12px;border-radius:6px;font:500 13px/1 var(--sans)}
+.tacts button:hover{border-color:var(--dc)}
+.tacts button:disabled{opacity:.45;cursor:default}
+
+/* ---------- filtered list ---------- */
+#listview{display:none;padding:28px 0 60px}
+body.listing #listview{display:block}
+body.listing main,body.listing .nav,body.listing .hint{display:none}
+.lvhead{display:flex;gap:16px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.lvhead h2{margin:0;font:700 19px/1.2 var(--cond);letter-spacing:-.01em}
+.lvhead h2 em{font-style:normal;color:var(--muted);font-weight:600}
 .lvhead #lvstart{margin-left:auto}
-.lvhead #lvclose{margin-left:0}
+.lvrows{display:flex;flex-direction:column;gap:8px}
+.lvrow{display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 15px;font:400 15px/1.5 var(--sans);color:var(--ink);transition:border-color .12s,background .12s}
+.lvrow:hover{border-color:var(--dc,var(--accent));background:#fafcfb}
+.lvrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lvrow .n{flex:0 0 46px;font:700 12px/1.5 var(--cond);letter-spacing:.08em;color:var(--dc,var(--accent))}
+.lvrow .body{flex:1;min-width:0}
+.lvrow .snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lvrow .meta{margin-top:5px;font:500 12px/1.4 var(--mono);color:var(--muted)}
+.lvrow .meta b{color:var(--wrong);font-weight:500} .lvrow .meta i{color:var(--right);font-style:normal}
+.lvempty{display:none;padding:30px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
+body.lv-empty .lvempty{display:block}
 body.lv-empty #lvstart{display:none}
+
+/* ---------- review banner ---------- */
+.reviewbar{display:none;align-items:center;gap:14px;flex-wrap:wrap;background:var(--dbg,var(--accent-soft));border:1px solid var(--dln,#a9cfc9);border-radius:8px;padding:11px 14px;margin-bottom:20px}
+body.review .reviewbar{display:flex}
+.reviewbar span{font:600 13px/1.3 var(--sans);color:var(--dc,#0b4a45)}
+.reviewbar span em{font-style:normal;font-weight:400;opacity:.8}
+.reviewbar .ghost{margin-left:auto;padding:6px 10px;font-size:12px}
 
 /* ---------- question ---------- */
 main{padding:28px 0 40px}
-.qhead{display:flex;gap:12px;align-items:baseline;margin-bottom:14px}
-.qnum{font:700 12px/1 var(--cond);letter-spacing:.12em;color:var(--accent);background:var(--accent-soft);padding:6px 9px;border-radius:4px}
-.qof{font:400 12px/1 var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.qhead{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.qnum{font:700 12px/1 var(--cond);letter-spacing:.12em;color:var(--dc);background:var(--dbg);padding:6px 9px;border-radius:4px}
+.dombadge{border:1px solid var(--dln);background:transparent;color:var(--dc);font:600 11px/1 var(--sans);letter-spacing:.04em;padding:5px 9px;border-radius:99px}
+.dombadge:hover{background:var(--dbg)}
+.qof{font:400 12px/1 var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-left:auto}
 .qtext{margin:0 0 20px;font-size:17px;line-height:1.6}
 .opts{display:flex;flex-direction:column;gap:9px}
 .opt{display:flex;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 15px;font:400 15px/1.5 var(--sans);color:var(--ink);transition:border-color .12s,background .12s}
@@ -87,27 +144,6 @@ body.hit .verdict{color:var(--right)} body.miss .verdict{color:var(--wrong)}
 .why{border:1px solid var(--line);border-left:4px solid var(--muted);background:var(--surface);border-radius:6px;padding:14px 16px}
 .why .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
 
-/* ---------- filtered list view ---------- */
-#listview{display:none;padding:28px 0 60px}
-body.listing #listview{display:block}
-body.listing main,body.listing .nav,body.listing .hint{display:none}
-.lvhead{display:flex;gap:16px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
-.lvhead h2{margin:0;font:700 19px/1.2 var(--cond);letter-spacing:-.01em}
-.lvhead h2 em{font-style:normal;color:var(--muted);font-weight:600}
-.lvhead .ghost{margin-left:auto}
-.lvrows{display:flex;flex-direction:column;gap:8px}
-.lvrow{display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 15px;font:400 15px/1.5 var(--sans);color:var(--ink);transition:border-color .12s,background .12s}
-.lvrow:hover{border-color:var(--accent);background:#fafcfb}
-.lvrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.lvrow .n{flex:0 0 46px;font:700 12px/1.5 var(--cond);letter-spacing:.08em;color:var(--accent)}
-.lvrow.miss .n{color:var(--wrong)}
-.lvrow .body{flex:1;min-width:0}
-.lvrow .snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.lvrow .meta{margin-top:5px;font:500 12px/1.4 var(--mono);color:var(--muted)}
-.lvrow .meta b{color:var(--wrong);font-weight:500} .lvrow .meta i{color:var(--right);font-style:normal}
-.lvempty{display:none;padding:30px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
-body.lv-empty .lvempty{display:block}
-
 /* ---------- paging ---------- */
 .nav{position:sticky;bottom:0;background:rgba(241,244,243,.95);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
 .navin{display:flex;gap:10px;align-items:center;padding:14px 0}
@@ -115,8 +151,7 @@ body.lv-empty .lvempty{display:block}
 .next:hover{background:#0c4a45}
 .next:disabled{opacity:.4;cursor:default}
 .done-msg{padding:26px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px;margin-top:20px;display:none}
-.done-msg p{margin:0 0 14px}
-.done-msg b{color:var(--ink)}
+.done-msg p{margin:0 0 14px} .done-msg b{color:var(--ink)}
 body.finished .done-msg{display:block}
 .hint{color:var(--muted);font-size:12px;padding:0 0 26px}
 kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width:2px;background:var(--surface);border-radius:3px;padding:3px 5px}
@@ -124,9 +159,10 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 @media (max-width:760px){
   .map{grid-template-columns:repeat(20,1fr)}
   .stats{margin-left:0;gap:14px} .stat b{font-size:18px}
-  .qtext{font-size:16px}
+  .qtext{font-size:16px} .qof{margin-left:0;width:100%}
   .navin{padding:12px 0} .next{padding:10px 16px}
   .hint{display:none}
+  .tcard .weight{margin-left:0}
 }
 @media (prefers-reduced-motion:reduce){.map button:hover{transform:none}}
 </style>
@@ -136,7 +172,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 <header>
   <div class="shell">
     <div class="bar">
-      <h1>CCA-F Question Bank<span>134 questions · untimed · one at a time</span></h1>
+      <h1>CCA-F Question Bank<span>134 questions · untimed · sorted by exam topic</span></h1>
       <div class="stats">
         <div class="stat">Answered<b id="sAns">0</b></div>
         <div class="stat ok">Correct<b id="sOk">0</b></div>
@@ -145,6 +181,7 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
       </div>
     </div>
     <div class="utils">
+      <button class="ghost key" id="topicsBtn">Topics</button>
       <button class="ghost" id="listOpen">Unanswered</button>
       <button class="ghost" id="listMissed">Missed</button>
       <button class="ghost" id="reset">New session</button>
@@ -155,6 +192,18 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 <div class="mapwrap">
   <div class="shell"><div class="map" id="map" role="group" aria-label="Jump to a question"></div></div>
 </div>
+
+<section id="topics">
+  <div class="shell">
+    <div class="thead-row">
+      <h2>The five exam topics</h2>
+      <button class="ghost" id="topicsClose">Back to the question</button>
+    </div>
+    <p class="tintro">Each question in this bank is tagged with the exam domain it tests. The percentage is that domain's weight on the real exam; the question count is what this bank happens to contain. Use it to find the topic you are weakest on and drill just that.</p>
+    <p class="tlegend"><i class="c"></i> correct &nbsp; <i class="m"></i> missed &nbsp; <i class="u"></i> not answered</p>
+    <div class="tgrid" id="tgrid"></div>
+  </div>
+</section>
 
 <section id="listview" aria-live="polite">
   <div class="shell">
@@ -175,8 +224,9 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
       <button class="ghost" id="rbexit">Exit review</button>
     </div>
 
-    <div class="qhead">
+    <div class="qhead" id="qhead">
       <span class="qnum" id="qnum">Q1</span>
+      <button class="dombadge" id="qdom" title="Show every question on this topic"></button>
       <span class="qof" id="qof">Question 1 of 134</span>
     </div>
     <p class="qtext" id="qtext"></p>
@@ -206,10 +256,11 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
 </div>
 
 <div class="shell hint">
-  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move between questions · <kbd>M</kbd> missed list · <kbd>U</kbd> unanswered list · <kbd>Esc</kbd> to close or leave review
+  <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> to answer · <kbd>←</kbd> <kbd>→</kbd> to move · <kbd>T</kbd> topics · <kbd>M</kbd> missed · <kbd>U</kbd> unanswered · <kbd>Esc</kbd> to go back
 </div>
 
 <script>
+
 
 // CCA-F practice bank — 134 questions
 // a = index of correct option (0=A). d = note where the community vote disagrees with the published key.
@@ -941,12 +992,36 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
 })();
 
 
+
 </script>
 <script>
 (function(){
   var Q = window.QUESTIONS || [], LTR = ['A','B','C','D'];
   var KEY = 'ccaf-progress-v1', POS = 'ccaf-pos-v1';
-  var state = load(KEY, {}), cur = 0, mode = 'all', listKind = 'open';
+
+  /* ---- exam domains, and which questions belong to each ---- */
+  var DOMAINS = [
+    { id:'A', weight:27, name:'Agentic Architecture and Orchestration',
+      blurb:'Multi-agent systems, subagent invocation, and orchestrator-worker patterns.',
+      qs:[1,2,3,4,5,6,7,8,9,10,11,12,13,36,39,50,51,69,73,75,76,78,80,81,82,83,84,85,89,93,115,134] },
+    { id:'B', weight:20, name:'Prompt Engineering and Structured Output',
+      blurb:'Production reliability, JSON schemas, retry loops, and prompt caching.',
+      qs:[37,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,111,112,113,114,116,120,121,122,126,129,130] },
+    { id:'C', weight:20, name:'Claude Code Configuration and Workflows',
+      blurb:'CLAUDE.md files, hooks, custom slash commands, and CI/CD pipelines.',
+      qs:[52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,86,87,88,92,117,118,119,123,124,125,127,128] },
+    { id:'D', weight:18, name:'Tool Design and MCP Integration',
+      blurb:'Secure tool interfaces, MCP primitives, and error responses.',
+      qs:[17,18,19,20,21,22,23,24,25,26,27,28,29,30,32,33,34,35,47,48,49,70,74,90,131,133] },
+    { id:'E', weight:15, name:'Context Management and Reliability',
+      blurb:'Managing context windows, session state, escalation, and safety guardrails.',
+      qs:[14,15,16,31,38,40,41,42,43,44,45,46,67,68,71,72,77,79,91,109,110,132] }
+  ];
+  var DOM = {}, DINFO = {};
+  DOMAINS.forEach(function(d){ DINFO[d.id] = d; d.qs.forEach(function(n){ DOM[n] = d.id; }); });
+  function domOf(i){ return DOM[Q[i].n] || 'A'; }
+
+  var state = load(KEY, {}), cur = 0, mode = 'all', listSpec = 'open';
   var saved = load(POS, null);
   if (typeof saved === 'number' && saved >= 0 && saved < Q.length) cur = saved;
 
@@ -960,34 +1035,55 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       function(m,p,t){ return p+'<code>'+t+'</code>'; });
   }
 
-  var el = {
-    map:  document.getElementById('map'),
-    qnum: document.getElementById('qnum'), qof: document.getElementById('qof'),
-    qtext:document.getElementById('qtext'), opts:document.getElementById('opts'),
-    verdict:document.getElementById('verdict'), alabel:document.getElementById('alabel'),
-    atext:document.getElementById('atext'), wtext:document.getElementById('wtext'),
-    prev: document.getElementById('prev'), next:document.getElementById('next'),
-    clearOne: document.getElementById('clearOne'),
-    listOpen: document.getElementById('listOpen'),
-    listMissed: document.getElementById('listMissed'),
-    lvtitle: document.getElementById('lvtitle'), lvrows: document.getElementById('lvrows'),
-    lvempty: document.getElementById('lvempty'), lvclose: document.getElementById('lvclose'),
-    lvstart: document.getElementById('lvstart'),
-    reviewbar: document.getElementById('reviewbar'), rbtext: document.getElementById('rbtext'),
-    rbexit: document.getElementById('rbexit'),
-    doneLine: document.getElementById('doneLine')
-  };
+  var el = {};
+  ['map','qhead','qnum','qdom','qof','qtext','opts','verdict','alabel','atext','wtext',
+   'prev','next','clearOne','listOpen','listMissed','lvtitle','lvrows','lvempty','lvclose','lvstart',
+   'reviewbar','rbtext','rbexit','doneLine','topicsBtn','topicsClose','tgrid']
+   .forEach(function(k){ el[k] = document.getElementById(k); });
 
-  /* --- jump map --- */
+  /* ---- predicates: 'all' | 'missed' | 'open' | 'dom:X' | 'dom:X:missed' ---- */
+  function isMissed(i){ var p = state[Q[i].n]; return p !== undefined && p !== Q[i].a; }
+  function isOpen(i){ return state[Q[i].n] === undefined; }
+
+  function pred(spec){
+    var p = String(spec).split(':'), dom = null, sel = 'all';
+    if (p[0] === 'dom'){ dom = p[1]; sel = p[2] || 'all'; } else { sel = p[0]; }
+    return function(i){
+      if (dom && domOf(i) !== dom) return false;
+      if (sel === 'missed') return isMissed(i);
+      if (sel === 'open') return isOpen(i);
+      return true;
+    };
+  }
+  function collect(spec){
+    var t = pred(spec), out = [];
+    for (var i = 0; i < Q.length; i++) if (t(i)) out.push(i);
+    return out;
+  }
+  function specLabel(spec){
+    var p = String(spec).split(':');
+    if (p[0] === 'dom'){
+      var n = DINFO[p[1]].name;
+      return p[2] === 'missed' ? n + ' — missed' : n;
+    }
+    return p[0] === 'missed' ? 'Missed questions' : 'Unanswered questions';
+  }
+  function specNoun(spec){
+    var p = String(spec).split(':');
+    if (p[0] === 'dom') return DINFO[p[1]].name + (p[2] === 'missed' ? ' (missed)' : '');
+    return p[0] === 'missed' ? 'missed' : 'unanswered';
+  }
+
+  /* ---- jump map ---- */
   Q.forEach(function(q, i){
     var b = document.createElement('button');
-    b.type = 'button'; b.title = 'Question ' + q.n;
+    b.type = 'button';
+    b.title = 'Q' + q.n + ' — ' + DINFO[domOf(i)].name;
     b.setAttribute('aria-label', 'Go to question ' + q.n);
     b.addEventListener('click', function(){ go(i, 'all'); });
     el.map.appendChild(b);
   });
   var cells = el.map.children;
-
   function paintMap(){
     for (var i = 0; i < Q.length; i++){
       var pick = state[Q[i].n], c = '';
@@ -997,11 +1093,15 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     }
   }
 
-  /* --- render the current question --- */
+  /* ---- current question ---- */
   function render(){
     var q = Q[cur], pick = state[q.n], done = pick !== undefined, hit = pick === q.a;
+    var d = domOf(cur);
 
+    el.qhead.setAttribute('data-dom', d);
+    el.reviewbar.setAttribute('data-dom', d);
     el.qnum.textContent = 'Q' + q.n;
+    el.qdom.textContent = DINFO[d].name;
     el.qof.textContent = 'Question ' + (cur + 1) + ' of ' + Q.length;
     el.qtext.innerHTML = tech(q.q);
 
@@ -1032,23 +1132,20 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
 
     var reviewing = mode !== 'all';
     document.body.classList.toggle('review', reviewing);
-
     if (reviewing){
-      var noun = mode === 'missed' ? 'missed' : 'unanswered';
-      el.prev.textContent = '← Previous ' + noun;
-      el.next.textContent = 'Next ' + noun + ' →';
+      var noun = specNoun(mode);
+      el.prev.textContent = '← Previous';
+      el.next.textContent = 'Next →';
       el.prev.disabled = step(-1) === -1;
       el.next.disabled = step(1) === -1;
-
-      var m = members(), at = m.indexOf(cur);
-      if (m.length === 0){
-        el.rbtext.innerHTML = 'Reviewing ' + noun + ' <em>— none left</em>';
-      } else if (at > -1){
-        el.rbtext.innerHTML = 'Reviewing ' + noun + ' <em>' + (at + 1) + ' of ' + m.length + '</em>';
-      } else {
-        el.rbtext.innerHTML = 'Reviewing ' + noun +
-          ' <em>this one is no longer ' + noun + ' · ' + m.length + ' left</em>';
-      }
+      var m = collect(mode), at = m.indexOf(cur);
+      el.rbtext.innerHTML = m.length === 0
+        ? 'Reviewing ' + noun + ' <em>— none left</em>'
+        : at > -1
+          ? 'Reviewing ' + noun + ' <em>' + (at + 1) + ' of ' + m.length + '</em>'
+          : 'Reviewing ' + noun + ' <em>' + m.length + ' left, this one is no longer in the set</em>';
+      var p = String(mode).split(':');
+      el.reviewbar.setAttribute('data-dom', p[0] === 'dom' ? p[1] : d);
     } else {
       el.prev.textContent = '← Previous';
       el.next.textContent = 'Next question →';
@@ -1063,49 +1160,117 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       var ans = 0, ok = 0;
       Q.forEach(function(x){ if (state[x.n] !== undefined){ ans++; if (state[x.n] === x.a) ok++; } });
       el.doneLine.innerHTML = ans === Q.length
-        ? 'All ' + Q.length + ' answered — <b>' + ok + ' correct</b>, ' + (ans - ok) + ' missed.'
+        ? 'All ' + Q.length + ' answered — <b>' + ok + ' correct</b>, ' + (ans - ok) +
+          ' missed. Open <b>Topics</b> for the per-topic breakdown.'
         : 'End of the bank. <b>' + ans + ' of ' + Q.length + '</b> answered so far.';
     }
     paintMap();
   }
 
-  function inSet(i){
-    if (mode === 'missed') return isMissed(i);
-    if (mode === 'open') return isOpen(i);
-    return true;
-  }
-  function members(){
-    var m = [];
-    for (var i = 0; i < Q.length; i++) if (inSet(i)) m.push(i);
-    return m;
-  }
   function step(dir){
-    for (var i = cur + dir; i >= 0 && i < Q.length; i += dir) if (inSet(i)) return i;
+    var t = pred(mode);
+    for (var i = cur + dir; i >= 0 && i < Q.length; i += dir) if (t(i)) return i;
     return -1;
   }
 
   function go(i, newMode){
     if (i < 0 || i >= Q.length) return;
     if (newMode) mode = newMode;
-    closeList();
+    closeAll();
     cur = i; put(POS, cur); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
   function exitReview(){ mode = 'all'; render(); }
+  function closeAll(){ document.body.classList.remove('listing', 'lv-empty', 'topicsview'); }
 
   function answer(i){
     var q = Q[cur];
     if (state[q.n] !== undefined) return;
     state[q.n] = i; save(); render(); tally();
   }
-
   function clearOne(){
     var q = Q[cur];
     if (state[q.n] === undefined) return;
     delete state[q.n]; save(); render(); tally();
   }
 
+  /* ---- filtered list ---- */
+  function openList(spec){
+    listSpec = spec;
+    var hits = collect(spec), p = String(spec).split(':');
+    var dom = p[0] === 'dom' ? p[1] : null;
+
+    el.lvtitle.innerHTML = specLabel(spec) + ' <em>' + hits.length + ' question' +
+                           (hits.length === 1 ? '' : 's') + '</em>';
+    el.lvempty.textContent = /missed/.test(spec)
+      ? 'Nothing missed here. Anything you get wrong will collect in this list.'
+      : dom ? 'No questions left on this topic.'
+            : 'Every question has been answered. Use New session to run the bank again.';
+
+    el.lvrows.innerHTML = '';
+    hits.forEach(function(i){
+      var q = Q[i], b = document.createElement('button');
+      b.type = 'button'; b.className = 'lvrow';
+      b.setAttribute('data-dom', domOf(i));
+      var meta = isMissed(i)
+        ? '<div class="meta">You chose <b>' + LTR[state[q.n]] + '</b> · correct is <i>' + LTR[q.a] + '</i></div>'
+        : (dom ? '' : '<div class="meta">' + DINFO[domOf(i)].name + '</div>');
+      b.innerHTML = '<span class="n">Q' + q.n + '</span><span class="body"><span class="snip">' +
+                    tech(q.q) + '</span>' + meta + '</span>';
+      b.addEventListener('click', function(){ go(i, spec); });
+      el.lvrows.appendChild(b);
+    });
+
+    el.lvstart.textContent = 'Review these in order →';
+    el.lvclose.textContent = 'Back to Q' + Q[cur].n;
+    closeAll();
+    document.body.classList.add('listing');
+    document.body.classList.toggle('lv-empty', hits.length === 0);
+    window.scrollTo({ top: 0 });
+  }
+
+  /* ---- topics ---- */
+  function openTopics(){
+    el.tgrid.innerHTML = '';
+    DOMAINS.forEach(function(d){
+      var idx = collect('dom:' + d.id), tot = idx.length, ans = 0, ok = 0;
+      idx.forEach(function(i){ if (state[Q[i].n] !== undefined){ ans++; if (state[Q[i].n] === Q[i].a) ok++; } });
+      var miss = ans - ok, share = Math.round(tot / Q.length * 100);
+
+      var c = document.createElement('article');
+      c.className = 'tcard'; c.setAttribute('data-dom', d.id);
+      c.innerHTML =
+        '<div class="top"><h3>' + d.name + '</h3><span class="weight">' + d.weight + '% of exam</span></div>' +
+        '<p class="tstat" style="margin-bottom:10px;color:var(--muted)">' + d.blurb + '</p>' +
+        '<div class="tbar"><i class="ok" style="width:' + (tot ? ok / tot * 100 : 0) + '%"></i>' +
+        '<i class="no" style="width:' + (tot ? miss / tot * 100 : 0) + '%"></i></div>' +
+        '<p class="tstat"><b>' + tot + '</b> questions (' + share + '% of the bank) · <b>' +
+        ans + '</b> answered' +
+        (ans ? ' · <i class="c">' + ok + ' correct</i> · <i class="m">' + miss + ' missed</i>' +
+               ' · <b>' + Math.round(ok / ans * 100) + '%</b> accuracy'
+             : ' · not started yet') + '</p>' +
+        '<div class="tacts">' +
+        '<button data-act="browse">Browse all ' + tot + '</button>' +
+        '<button data-act="review">Review in order →</button>' +
+        '<button data-act="missed"' + (miss ? '' : ' disabled') + '>Review missed (' + miss + ')</button>' +
+        '</div>';
+
+      c.addEventListener('click', function(ev){
+        var b = ev.target.closest('button'); if (!b) return;
+        var act = b.getAttribute('data-act');
+        if (act === 'browse') return openList('dom:' + d.id);
+        if (act === 'review'){ var m = collect('dom:' + d.id); if (m.length) go(m[0], 'dom:' + d.id); return; }
+        if (act === 'missed'){ var k = collect('dom:' + d.id + ':missed'); if (k.length) go(k[0], 'dom:' + d.id + ':missed'); }
+      });
+      el.tgrid.appendChild(c);
+    });
+    el.topicsClose.textContent = 'Back to Q' + Q[cur].n;
+    closeAll();
+    document.body.classList.add('topicsview');
+    window.scrollTo({ top: 0 });
+  }
+
+  /* ---- counters ---- */
   function tally(){
     var ans = 0, ok = 0;
     Q.forEach(function(q){ if (state[q.n] !== undefined){ ans++; if (state[q.n] === q.a) ok++; } });
@@ -1113,73 +1278,31 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     document.getElementById('sOk').textContent = ok;
     document.getElementById('sNo').textContent = ans - ok;
     document.getElementById('sAcc').textContent = ans ? Math.round(ok / ans * 100) + '%' : '—';
-
-    var missed = ans - ok, open_ = Q.length - ans;
-    el.listMissed.textContent = 'Missed (' + missed + ')';
-    el.listOpen.textContent = 'Unanswered (' + open_ + ')';
+    el.listMissed.textContent = 'Missed (' + (ans - ok) + ')';
+    el.listOpen.textContent = 'Unanswered (' + (Q.length - ans) + ')';
   }
 
+  /* ---- wiring ---- */
   el.prev.addEventListener('click', function(){ go(mode === 'all' ? cur - 1 : step(-1)); });
   el.next.addEventListener('click', function(){ go(mode === 'all' ? cur + 1 : step(1)); });
-  el.rbexit.addEventListener('click', exitReview);
   el.clearOne.addEventListener('click', clearOne);
-
-  function isMissed(i){ var p = state[Q[i].n]; return p !== undefined && p !== Q[i].a; }
-  function isOpen(i){ return state[Q[i].n] === undefined; }
-
-  function openList(kind){
-    listKind = kind;
-    var test = kind === 'missed' ? isMissed : isOpen;
-    var hits = [];
-    for (var i = 0; i < Q.length; i++) if (test(i)) hits.push(i);
-
-    el.lvtitle.innerHTML = (kind === 'missed' ? 'Missed questions' : 'Unanswered questions') +
-      ' <em>' + hits.length + ' of ' + Q.length + '</em>';
-    el.lvempty.textContent = kind === 'missed'
-      ? 'Nothing missed so far. Answer some questions and anything you get wrong will collect here.'
-      : 'Every question has been answered. Use New session to run the bank again.';
-
-    el.lvrows.innerHTML = '';
-    hits.forEach(function(i){
-      var q = Q[i], b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'lvrow' + (kind === 'missed' ? ' miss' : '');
-      var meta = kind === 'missed'
-        ? '<div class="meta">You chose <b>' + LTR[state[q.n]] + '</b> · correct is <i>' + LTR[q.a] + '</i></div>'
-        : '';
-      b.innerHTML = '<span class="n">Q' + q.n + '</span><span class="body"><span class="snip">' +
-                    tech(q.q) + '</span>' + meta + '</span>';
-      b.addEventListener('click', function(){ go(i, kind); });
-      el.lvrows.appendChild(b);
-    });
-
-    el.lvstart.textContent = (kind === 'missed' ? 'Review these in order' : 'Work through these in order') + ' →';
-
-    el.lvclose.textContent = 'Back to Q' + Q[cur].n;
-    document.body.classList.add('listing');
-    document.body.classList.toggle('lv-empty', hits.length === 0);
-    window.scrollTo({ top: 0 });
-  }
-
-  function closeList(){ document.body.classList.remove('listing', 'lv-empty'); }
-
+  el.rbexit.addEventListener('click', exitReview);
   el.listOpen.addEventListener('click', function(){ openList('open'); });
   el.listMissed.addEventListener('click', function(){ openList('missed'); });
-  el.lvclose.addEventListener('click', closeList);
+  el.lvclose.addEventListener('click', closeAll);
   el.lvstart.addEventListener('click', function(){
-    var m = [], test = listKind === 'missed' ? isMissed : isOpen;
-    for (var i = 0; i < Q.length; i++) if (test(i)) { m.push(i); break; }
-    if (m.length) go(m[0], listKind);
+    var m = collect(listSpec);
+    if (m.length) go(m[0], listSpec);
   });
+  el.topicsBtn.addEventListener('click', openTopics);
+  el.topicsClose.addEventListener('click', closeAll);
+  el.qdom.addEventListener('click', function(){ openList('dom:' + domOf(cur)); });
 
-  /* New session: wipes every answer and returns to Q1.
-     Two-step rather than confirm(), which is blocked in sandboxed frames. */
   function newSession(){
     state = {};
     try{ localStorage.removeItem(KEY); }catch(e){}
-    save(); closeList(); go(0, 'all'); tally();
+    save(); go(0, 'all'); tally();
   }
-
   function armButton(btn, idle, warn, action){
     var armed = false, timer;
     function disarm(){ armed = false; btn.textContent = idle; btn.classList.remove('armed'); }
@@ -1192,7 +1315,6 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       clearTimeout(timer); disarm(); action();
     });
   }
-
   armButton(document.getElementById('reset'), 'New session', 'Click again to start over', newSession);
   armButton(document.getElementById('resetEnd'), 'Start a new session', 'Click again to start over', newSession);
 
@@ -1200,13 +1322,16 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var t = (ev.target.tagName || '').toLowerCase();
     if (t === 'input' || t === 'textarea') return;
-    if (ev.key === 'ArrowRight'){ ev.preventDefault(); go(cur + 1); return; }
-    if (ev.key === 'ArrowLeft'){ ev.preventDefault(); go(cur - 1); return; }
-    if (ev.key === 'Escape'){ if (document.body.classList.contains('listing')) closeList(); else exitReview(); return; }
-    if (document.body.classList.contains('listing')) return;
-    if ((ev.key || '').toLowerCase() === 'm'){ ev.preventDefault(); openList('missed'); return; }
-    if ((ev.key || '').toLowerCase() === 'u'){ ev.preventDefault(); openList('open'); return; }
-    var i = ['a','b','c','d'].indexOf((ev.key || '').toLowerCase());
+    var overlay = document.body.classList.contains('listing') || document.body.classList.contains('topicsview');
+    if (ev.key === 'Escape'){ if (overlay) closeAll(); else exitReview(); return; }
+    var k = (ev.key || '').toLowerCase();
+    if (k === 't'){ ev.preventDefault(); openTopics(); return; }
+    if (k === 'm'){ ev.preventDefault(); openList('missed'); return; }
+    if (k === 'u'){ ev.preventDefault(); openList('open'); return; }
+    if (overlay) return;
+    if (ev.key === 'ArrowRight'){ ev.preventDefault(); go(mode === 'all' ? cur + 1 : step(1)); return; }
+    if (ev.key === 'ArrowLeft'){ ev.preventDefault(); go(mode === 'all' ? cur - 1 : step(-1)); return; }
+    var i = ['a','b','c','d'].indexOf(k);
     if (i === -1) i = ['1','2','3','4'].indexOf(ev.key);
     if (i > -1){ ev.preventDefault(); answer(i); }
   });
