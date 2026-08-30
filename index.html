@@ -65,6 +65,20 @@ body.s-exam:not(.graded) .mapwrap{display:none}
 .begin:hover{background:#0c4a45}
 .brief-acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
+/* ---------- paused ---------- */
+#paused{display:none}
+body.paused #paused{display:block}
+body.paused main,body.paused .nav,body.paused #reviewscreen,body.paused #listview,body.paused .hint{display:none!important}
+#paused{padding:60px 0 90px}
+.pause-card{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--flag);border-radius:12px;padding:34px;max-width:520px;margin:0 auto;text-align:center}
+.pause-card .icon{font:700 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--flag);background:var(--flag-bg);border:1px solid var(--flag-line);display:inline-block;padding:7px 12px;border-radius:99px;margin-bottom:18px}
+.pause-card h2{margin:0 0 8px;font:700 26px/1.2 var(--cond);letter-spacing:-.02em}
+.pause-card p{margin:0 0 22px;color:var(--muted);font-size:14px}
+.pause-clock{font:600 40px/1 var(--mono);letter-spacing:-.01em;margin-bottom:6px;font-variant-numeric:tabular-nums}
+.pause-sub{font:500 12px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:24px}
+.pause-card .begin{width:100%;margin-bottom:10px}
+.stat.clock.hold b{color:var(--flag)}
+
 /* ---------- end-of-exam review screen ---------- */
 #reviewscreen{padding:30px 0 70px}
 .rs-head{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
@@ -390,12 +404,27 @@ kbd{font:500 11px/1 var(--mono);border:1px solid var(--line);border-bottom-width
         <li>No right or wrong is shown, and no explanations appear, until you submit.</li>
         <li>A review screen at the end lists every question with its status so you can revisit before submitting.</li>
         <li>When the clock reaches zero the exam submits itself with whatever you have answered.</li>
-        <li>Leaving the exam does not pause the clock, exactly as it would not in a proctored sitting.</li>
+        <li>You can pause the clock whenever you need to. The question is hidden while paused, and paused time is excluded from the pacing figures in your report.</li>
+        <li>Leaving without pausing does not stop the clock, exactly as it would not in a proctored sitting.</li>
       </ul>
       <div class="brief-acts">
         <button class="begin" id="beginExam">Begin exam · start the clock</button>
         <button class="ghost" id="briefBack">Back</button>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="paused">
+  <div class="shell">
+    <div class="pause-card">
+      <span class="icon">Paused</span>
+      <h2>The clock is stopped</h2>
+      <div class="pause-clock" id="pauseClock">—</div>
+      <div class="pause-sub">remaining when you resume</div>
+      <p id="pauseNote">The question is hidden while you are away, so the pause stays honest. Nothing is submitted and your answers are saved.</p>
+      <button class="begin" id="resumeExam">Resume exam</button>
+      <button class="ghost" id="pauseHome">Leave for now — it stays paused</button>
     </div>
   </div>
 </section>
@@ -1283,6 +1312,8 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       function(m,p,t){ return p+'<code>'+t+'</code>'; });
   }
   function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function paused(){ return !!(exam && exam.pausedAt); }
+  function timeLeft(){ return exam ? exam.endAt - (exam.pausedAt || Date.now()) : 0; }
   function clock(ms){
     if (ms < 0) ms = 0;
     var s = Math.floor(ms / 1000);
@@ -1300,7 +1331,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
    'startPractice','examResume','practiceSub','bprows','homeNote','scorecard','verdictbig','scaledScore',
    'scoremeta','rrows','revAll','revWrong','revFlag','newExam','resHome','navin',
    'beginExam','briefBack','rsClock','rsSum','rsWarn','rgrid','rsActs','focus','focusText',
-   'pacerows','printRep']
+   'pacerows','printRep','pauseClock','pauseNote','resumeExam','pauseHome']
    .forEach(function(k){ el[k] = document.getElementById(k); });
 
   /* ================= state ================= */
@@ -1357,8 +1388,9 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
         b1.textContent = 'See your last result';
         b1.addEventListener('click', function(){ setScreen('exam'); showResults(); });
       } else {
-        var left = exam.endAt - Date.now();
-        b1.textContent = left > 0 ? 'Resume exam in progress — ' + clock(left) + ' left' : 'Finish the expired exam';
+        var left = timeLeft();
+        b1.textContent = left <= 0 ? 'Finish the expired exam'
+          : (paused() ? 'Resume paused exam — ' : 'Resume exam in progress — ') + clock(left) + ' left';
         b1.addEventListener('click', function(){ resumeExam(); });
       }
       el.examResume.appendChild(b1);
@@ -1401,7 +1433,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       chosen = chosen.concat(shuffle(pool).slice(0, d.take));
     });
     shuffle(chosen);
-    exam = { ids: chosen, ans: {}, flags: {}, time: {}, pos: 0, submitted: false,
+    exam = { ids: chosen, ans: {}, flags: {}, time: {}, pos: 0, submitted: false, pausedAt: null, pausedMs: 0,
              startedAt: Date.now(), endAt: Date.now() + EXAM_MIN * 60000 };
     qStart = Date.now();
     put(K_EX, exam);
@@ -1412,14 +1444,50 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     cur = Math.min(exam.pos || 0, exam.ids.length - 1); mode = 'all';
     qStart = Date.now();
     setScreen('exam');
-    if (!exam.submitted && Date.now() >= exam.endAt) return submitExam(true);
+    if (!exam.submitted && paused()){
+      document.body.classList.add('paused');
+      renderChrome(); paintPause(); render();
+      return;
+    }
+    if (!exam.submitted && timeLeft() <= 0) return submitExam(true);
     render();
   }
+  function pauseExam(){
+    if (screen !== 'exam' || !exam || exam.submitted || paused()) return;
+    stampTime();
+    exam.pausedAt = Date.now();
+    put(K_EX, exam);
+    document.body.classList.add('paused');
+    document.body.classList.remove('listing', 'reviewview', 'topicsview');
+    renderChrome(); paintPause();
+    window.scrollTo({ top: 0 });
+  }
+  function unpauseExam(){
+    if (!exam || !paused()) return;
+    var held = Date.now() - exam.pausedAt;
+    exam.endAt += held;
+    exam.pausedMs = (exam.pausedMs || 0) + held;
+    exam.pausedAt = null;
+    put(K_EX, exam);
+    qStart = Date.now();
+    document.body.classList.remove('paused');
+    renderChrome(); render(); startTicker();
+  }
+  function paintPause(){
+    el.pauseClock.textContent = clock(timeLeft());
+    var held = paused() ? Date.now() - exam.pausedAt : 0;
+    var total = (exam.pausedMs || 0) + held;
+    el.pauseNote.textContent = total > 60000
+      ? 'Paused for ' + Math.round(total / 60000) + ' minutes so far. The question is hidden while you are away, and nothing is submitted.'
+      : 'The question is hidden while you are away, so the pause stays honest. Nothing is submitted and your answers are saved.';
+  }
+
   function startTicker(){ stopTicker(); ticker = setInterval(tick, 1000); tick(); }
   function stopTicker(){ if (ticker){ clearInterval(ticker); ticker = null; } }
   function tick(){
     if (screen !== 'exam' || !exam || exam.submitted) return stopTicker();
-    var left = exam.endAt - Date.now();
+    if (paused()){ paintPause(); return; }
+    var left = timeLeft();
     if (clockRef){
       clockRef.val.textContent = clock(left);
       clockRef.box.classList.toggle('warn', left <= 10 * 60000 && left > 2 * 60000);
@@ -1429,6 +1497,8 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
   }
   function submitExam(auto){
     stampTime();
+    if (paused()){ exam.pausedMs = (exam.pausedMs || 0) + (Date.now() - exam.pausedAt); exam.pausedAt = null; }
+    document.body.classList.remove('paused');
     exam.submitted = true; exam.finishedAt = Date.now(); put(K_EX, exam);
     stopTicker(); mode = 'all';
     document.body.classList.add('showfb', 'graded');
@@ -1455,11 +1525,13 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     el.scorecard.className = 'scorecard ' + (passed ? 'pass' : 'fail');
     el.verdictbig.textContent = passed ? 'Likely pass' : 'Below the pass mark';
     el.scaledScore.innerHTML = s.scaled + '<small>of 1,000 · 720 to pass</small>';
-    var mins = Math.round(((exam.finishedAt || Date.now()) - exam.startedAt) / 60000);
+    var held = exam.pausedMs || 0;
+    var mins = Math.round((((exam.finishedAt || Date.now()) - exam.startedAt) - held) / 60000);
     el.scoremeta.innerHTML =
       '<span><b>' + s.ok + ' / ' + exam.ids.length + '</b> correct (' + Math.round(s.raw * 100) + '%)</span>' +
       '<span>Domain-weighted <b>' + Math.round(s.weighted * 100) + '%</b></span>' +
-      '<span>Time used <b>' + mins + ' min</b> of ' + EXAM_MIN + '</span>' +
+      '<span>Time used <b>' + mins + ' min</b> of ' + EXAM_MIN +
+        (held > 60000 ? ' (paused ' + Math.round(held / 60000) + ' min)' : '') + '</span>' +
       (auto ? '<span><b>Time expired</b> — submitted automatically</span>' : '');
 
     el.rrows.innerHTML = '';
@@ -1502,7 +1574,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
 
     /* pacing */
     el.pacerows.innerHTML = '';
-    var totalMs = (exam.finishedAt || Date.now()) - exam.startedAt;
+    var totalMs = ((exam.finishedAt || Date.now()) - exam.startedAt) - (exam.pausedMs || 0);
     var tracked = exam.time || {};
     var pace = [];
     DOMAINS.forEach(function(d){
@@ -1555,7 +1627,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       ? 'One question is still unanswered. An unanswered question scores nothing — there is no penalty for guessing.'
       : un + ' questions are still unanswered. An unanswered question scores nothing — there is no penalty for guessing.';
     document.body.classList.toggle('has-unanswered', un > 0);
-    el.rsClock.textContent = 'Time left ' + clock(exam.endAt - Date.now());
+    el.rsClock.textContent = (paused() ? 'Paused · ' : 'Time left ') + clock(timeLeft());
 
     el.rsActs.innerHTML = '';
     function act(label, fn, cls){
@@ -1620,11 +1692,13 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
         el.brandsub.textContent = EXAM_N + ' questions · ' + EXAM_MIN + ' minutes · no feedback until you submit';
         stat('Answered', done + '/' + exam.ids.length);
         stat('Flagged', flg);
-        clockRef = stat('Time left', clock(exam.endAt - Date.now()), 'clock');
+        clockRef = stat(paused() ? 'Paused at' : 'Time left', clock(timeLeft()), 'clock' + (paused() ? ' hold' : ''));
+        if (paused()) btn('Resume the clock', unpauseExam, 'key');
+        else btn('Pause', pauseExam);
         btn('Review & submit', openReviewScreen, 'key');
         btn('Question list', function(){ openList('exam:all'); });
         if (flg) btn('Flagged (' + flg + ')', function(){ openList('exam:flag'); });
-        btn('Leave (clock keeps running)', goHome);
+        btn(paused() ? 'Leave (stays paused)' : 'Leave (clock keeps running)', goHome);
       } else {
         var s = examScore();
         el.brand.childNodes[0].nodeValue = 'Mock exam — review';
@@ -1943,6 +2017,8 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
   el.beginExam.addEventListener('click', buildExam);
   el.briefBack.addEventListener('click', goHome);
   el.printRep.addEventListener('click', function(){ window.print(); });
+  el.resumeExam.addEventListener('click', unpauseExam);
+  el.pauseHome.addEventListener('click', goHome);
   el.startPractice.addEventListener('click', function(){
     cur = savedPos; mode = 'all'; setScreen('practice'); render();
   });
@@ -1960,6 +2036,11 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
     var t = (ev.target.tagName || '').toLowerCase();
     if (t === 'input' || t === 'textarea') return;
     if (screen === 'home') return;
+    if (document.body.classList.contains('paused')){
+      var kk = (ev.key || '').toLowerCase();
+      if (kk === 'p' || ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); unpauseExam(); }
+      return;
+    }
     var overlay = document.body.classList.contains('listing') ||
                   document.body.classList.contains('topicsview') ||
                   document.body.classList.contains('resultsview') ||
@@ -1976,6 +2057,7 @@ e:"Grep searches file contents, which is what “content search” means. Glob m
       if (k === 'u'){ ev.preventDefault(); return openList('open'); }
     } else {
       if (k === 'l'){ ev.preventDefault(); return openList('exam:all'); }
+      if (k === 'p' && !exam.submitted){ ev.preventDefault(); return pauseExam(); }
       if (k === 'r' && !exam.submitted){ ev.preventDefault(); return openReviewScreen(); }
       if (k === 'f' && !exam.submitted){ ev.preventDefault(); return toggleFlag(); }
     }
